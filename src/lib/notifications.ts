@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { prisma } from './prisma';
 import { NotificationType, Prisma } from '@prisma/client';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY ?? 'placeholder');
 
 if (
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
@@ -107,7 +107,7 @@ export async function sendQRScannedNotification(
       data: { url: '/dashboard', type: 'qr_scan' },
     }),
     user.email &&
-      resend.emails.send({
+      getResend().emails.send({
         from: process.env.EMAIL_FROM!,
         to: user.email,
         subject: `🚨 ${title}`,
@@ -121,7 +121,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
     console.log(`[Dev] Welcome email skipped for ${email} — no Resend key configured`);
     return;
   }
-  return resend.emails.send({
+  return getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: email,
     subject: '🚨 Welcome to QR-SOS — Your Safety Profile is Ready',
