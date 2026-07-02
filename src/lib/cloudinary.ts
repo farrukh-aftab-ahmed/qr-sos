@@ -1,42 +1,37 @@
-import { v2 as cloudinary } from 'cloudinary';
+import { Storage } from '@google-cloud/storage';
+import sharp from 'sharp';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+const storage = new Storage();
 
-/** Returns true only when real (non-placeholder) Cloudinary credentials are set. */
+function getBucket() {
+  return storage.bucket(process.env.GCS_BUCKET_NAME!);
+}
+
 export function isCloudinaryConfigured(): boolean {
-  const name = process.env.CLOUDINARY_CLOUD_NAME;
-  const key  = process.env.CLOUDINARY_API_KEY;
-  const sec  = process.env.CLOUDINARY_API_SECRET;
-  return !!(
-    name && !name.startsWith('your-') &&
-    key  && !key.startsWith('your-') &&
-    sec  && !sec.startsWith('your-')
-  );
+  const bucket = process.env.GCS_BUCKET_NAME;
+  return !!bucket && !bucket.startsWith('your-');
 }
 
 export async function uploadProfileImage(
   base64Image: string,
   userId: string
 ): Promise<{ url: string; publicId: string }> {
-  const result = await cloudinary.uploader.upload(base64Image, {
-    folder: 'qr-sos/profiles',
-    public_id: `user_${userId}`,
-    overwrite: true,
-    transformation: [
-      { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-      { quality: 'auto', fetch_format: 'auto' },
-    ],
-  });
-  return { url: result.secure_url, publicId: result.public_id };
+  const raw = base64Image.replace(/^data:image\/\w+;base64,/, '');
+  const resized = await sharp(Buffer.from(raw, 'base64'))
+    .resize(400, 400, { fit: 'cover', position: 'centre' })
+    .webp({ quality: 80 })
+    .toBuffer();
+
+  const objectPath = `profiles/user_${userId}.webp`;
+  const file = getBucket().file(objectPath);
+  await file.save(resized, { contentType: 'image/webp', public: true });
+
+  return {
+    url: `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${objectPath}`,
+    publicId: objectPath,
+  };
 }
 
 export async function deleteImage(publicId: string): Promise<void> {
-  await cloudinary.uploader.destroy(publicId);
+  await getBucket().file(publicId).delete({ ignoreNotFound: true });
 }
-
-export { cloudinary };

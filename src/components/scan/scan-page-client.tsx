@@ -284,7 +284,7 @@ export function ScanPageClient({ qrCodeId }: { qrCodeId: string }) {
               <div className="border-t border-white/5 px-5 sm:px-7 py-3 flex items-center justify-between">
                 <p className="text-white/20 text-xs">Powered by QR-SOS</p>
                 <Link href="/" className="text-[#FF2D55]/60 hover:text-[#FF2D55] text-xs transition-colors">
-                  qr-sos.com
+                  qr-sos.online
                 </Link>
               </div>
             </motion.div>

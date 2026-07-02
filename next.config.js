@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['172.26.240.1', '192.168.10.7', '10.80.92.64', '192.168.10.9'],
   output: 'standalone',
   serverExternalPackages: ['@prisma/client', 'bcryptjs', 'sharp'],
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
