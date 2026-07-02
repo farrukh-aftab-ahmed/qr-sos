@@ -10,7 +10,7 @@ interface ScanResult {
   scanId: string;
   isGuest: boolean;
   profile: {
-    name: string;
+    name?: string;
     phone: string | null;
     profileImage: string | null;
     emergencyContact: {
@@ -95,7 +95,7 @@ export function ScanPageClient({ qrCodeId }: { qrCodeId: string }) {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               >
-                <Image src="/logo.png" alt="Loading" width={64} height={64} className="w-16 h-16 object-contain" />
+                <Image src="/logo.png" alt="Loading" width={64} height={64} className="w-16 h-16 object-contain" priority />
               </motion.div>
               <p className="text-white font-medium">Loading safety profile...</p>
               <p className="text-white/40 text-sm mt-1">Please wait</p>
@@ -153,28 +153,30 @@ export function ScanPageClient({ qrCodeId }: { qrCodeId: string }) {
                   )}
                 </div>
 
-                {/* Profile info */}
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#FF2D55] to-[#FF6B35] flex-shrink-0">
-                    {result.profile.profileImage ? (
-                      <img
-                        src={result.profile.profileImage}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User className="w-7 h-7 text-white" />
-                      </div>
-                    )}
+                {/* Profile info — name + photo only for logged-in users */}
+                {!result.isGuest && result.profile.name && (
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#FF2D55] to-[#FF6B35] flex-shrink-0">
+                      {result.profile.profileImage ? (
+                        <img
+                          src={result.profile.profileImage}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User className="w-7 h-7 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="font-display font-black text-xl sm:text-2xl text-white truncate">
+                        {result.profile.name}
+                      </h2>
+                      <p className="text-white/50 text-sm">Vehicle Owner</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h2 className="font-display font-black text-xl sm:text-2xl text-white truncate">
-                      {result.profile.name}
-                    </h2>
-                    <p className="text-white/50 text-sm">Vehicle Owner</p>
-                  </div>
-                </div>
+                )}
 
                 {/* Contact numbers */}
                 <div className="space-y-3 mb-4">

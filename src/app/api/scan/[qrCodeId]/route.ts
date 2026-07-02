@@ -76,7 +76,8 @@ export async function GET(
     scanId: scan.id,
     isGuest: !isLoggedIn,
     profile: {
-      name: scannedUser.name,
+      // Guests see phone + emergency contacts only — owner name/photo are private
+      ...(isLoggedIn ? { name: scannedUser.name } : {}),
       phone: scannedUser.phone,
       profileImage: isLoggedIn ? scannedUser.profileImage : null,
       emergencyContact: primaryContact

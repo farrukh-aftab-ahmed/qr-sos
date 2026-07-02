@@ -64,6 +64,7 @@ export function LoginForm() {
               width={80}
               height={80}
               className="h-16 w-auto object-contain mx-auto drop-shadow-[0_0_16px_rgba(255,45,85,0.3)]"
+              priority
             />
           </motion.div>
           <h1 className="font-display font-black text-2xl text-white mb-1">Welcome Back</h1>
