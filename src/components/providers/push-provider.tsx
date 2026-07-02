@@ -173,7 +173,7 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
         const existing = await reg.pushManager.getSubscription();
         const sub = existing ?? await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource,
         });
 
         await fetch('/api/push/subscribe', {
