@@ -166,5 +166,5 @@ Write-Host "Your site will be live at: https://qr-sos.online" -ForegroundColor G
 # ─── STEP 12 — Connect GitHub for auto-deploy ────────────────────────────────
 Write-Host "`n[STEP 12] Set up auto-deploy from GitHub..." -ForegroundColor Cyan
 Write-Host "Go to: https://console.cloud.google.com/cloud-build/triggers?project=$PROJECT_ID" -ForegroundColor Yellow
-Write-Host "Click 'Connect Repository' -> GitHub -> select farrukh-aftab-ahmed/qr-sos-gcp" -ForegroundColor Yellow
-Write-Host "Trigger: push to main branch, use cloudbuild.yaml" -ForegroundColor Yellow
+Write-Host "Click 'Connect Repository' -> GitHub -> select farrukh-aftab-ahmed/qr-sos" -ForegroundColor Yellow
+Write-Host "Trigger: push to 'gcp' branch, use cloudbuild.yaml in repo root" -ForegroundColor Yellow
