@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String
+  phone             String    @unique
+  passwordHash      String?
+  profileImage      String?
+  profileImagePublicId String?
+  qrCode            String?   @unique
+  qrCodeId          String?   @unique @default(cuid())
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  emergencyContacts EmergencyContact[]
+  accounts          Account[]
+  sessions          Session[]
+  qrScans           QrScan[]    @relation("ScannedUser")
+  scannerScans      QrScan[]    @relation("ScannerUser")
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+
+  @@map("users")
+}
+
+model EmergencyContact {
+  id           String  @id @default(cuid())
+  userId       String
+  name         String
+  phone        String
+  relationship String
+  isPrimary    Boolean @default(false)
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+model QrScan {
+  id          String   @id @default(cuid())
+  scannedUserId String
+  scannerId   String?
+  scannerIp   String?
+  userAgent   String?
+  location    String?
+  createdAt   DateTime @default(now())
+
+  scannedUser User  @relation("ScannedUser", fields: [scannedUserId], references: [id], onDelete: Cascade)
+  scanner     User? @relation("ScannerUser", fields: [scannerId], references: [id], onDelete: SetNull)
+
+  @@map("qr_scans")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+enum NotificationType {
+  QR_SCANNED
+  EMERGENCY_CONTACT_UPDATED
+  PROFILE_UPDATED
+  ACCOUNT_VERIFIED
+  WELCOME
+}

@@ -1,0 +1,67 @@
+import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
+import './globals.css';
+import { Providers } from '@/components/providers';
+import { Toaster } from '@/components/ui/toaster';
+
+// Plus Jakarta Sans — clean, modern, highly legible at every size
+const inter = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-inter',   // keep CSS var name — Tailwind config references it
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800'],
+});
+
+// Outfit — geometric, modern, great for headings and display text
+const syne = Outfit({
+  subsets: ['latin'],
+  variable: '--font-syne',    // keep CSS var name — Tailwind config references it
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800', '900'],
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: 'QR-SOS — Emergency Vehicle Identification',
+    template: '%s | QR-SOS',
+  },
+  description:
+    'Instantly share your emergency info when it matters most. Place your QR-SOS sticker on your vehicle — one scan contacts your emergency people.',
+  keywords: ['emergency', 'qr code', 'vehicle safety', 'accident', 'emergency contact', 'sos'],
+  authors: [{ name: 'QR-SOS' }],
+  openGraph: {
+    title: 'QR-SOS — Emergency Vehicle Identification',
+    description: 'One scan. Emergency contact. Your safety sticker.',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'QR-SOS',
+    description: 'One scan. Emergency contact. Your safety sticker.',
+  },
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#FF2D55',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={`${inter.variable} ${syne.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
+      <body className="min-h-screen bg-sos-darker antialiased">
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
+      </body>
+    </html>
+  );
+}

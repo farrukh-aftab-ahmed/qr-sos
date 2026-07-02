@@ -1,0 +1,427 @@
+================================================================================
+                    QR-SOS — PROJECT SUMMARY & RUN GUIDE
+================================================================================
+
+Project Location : E:\NEW_CT\Share Code Claude\qr-sos
+Date Written     : 2026-06-30
+Author           : Shahzeb (mrshahzebkhoso@gmail.com)
+
+
+================================================================================
+ 1. WHAT IS QR-SOS?
+================================================================================
+
+QR-SOS is a full-stack emergency vehicle identification web platform. The core
+idea is simple: every registered user gets a unique QR code sticker they can
+print and attach to their vehicle (windscreen, helmet, bike, etc.). If that
+person is ever in an accident or emergency, a first responder or bystander just
+scans the QR code with any phone camera — no app required — and instantly sees
+the person's emergency contacts, so help can be summoned immediately.
+
+The platform also records every scan, sends real-time push notifications to the
+vehicle owner when their QR is scanned, and provides a dashboard where users
+can manage their profile, emergency contacts, and view their scan history.
+
+
+================================================================================
+ 2. KEY FEATURES
+================================================================================
+
+REGISTRATION & AUTHENTICATION
+  - Multi-step registration form (4 steps):
+      Step 1 : Personal info (name, email, phone, password)
+      Step 2 : Emergency contacts (up to 3; at least 1 required)
+      Step 3 : Profile photo upload (optional, with face-crop resize)
+      Step 4 : Account created + QR code generated
+  - Login with email + password (NextAuth.js v5 JWT strategy)
+  - Session persists across browser tabs/refreshes
+
+QR CODE SYSTEM
+  - Each user gets a unique QR Code ID (CUID) on registration
+  - QR code is generated on-demand as PNG via /api/qr/image (no stale DB data)
+  - QR sticker can be downloaded as an SVG file from the dashboard
+  - Sticker design: 400x520px dark card with gradient red border, SOS cross
+    icon, QR code, scan badge, user's first name and ID, corner brackets
+  - Scan URL format: https://qr-sos.com/scan/<qrCodeId>
+
+SCAN PAGE (no login required)
+  - Anyone who scans the QR code lands on /scan/<qrCodeId>
+  - Page shows: vehicle owner's name, profile photo, and all emergency contacts
+    with phone numbers and relationship labels
+  - Scan is logged in the database (IP, user agent, timestamp, scanner identity
+    if they happen to be a logged-in user)
+  - Push notification sent to vehicle owner when their QR is scanned
+
+DASHBOARD
+  - Overview cards: total scans, emergency contacts count, last scan time
+  - QR code display with download sticker button
+  - Recent Scans list — click any scan to see the scanner's profile in a modal
+    (name, photo, email, phone, tap-to-call, scan timestamp)
+  - Unread notifications badge
+
+PROFILE MANAGEMENT
+  - Edit name, phone number, profile photo
+  - Add/edit/remove emergency contacts
+  - Profile photo stored via Cloudinary (if configured) or local filesystem
+
+NOTIFICATIONS
+  - In-app notification list (unread badge in nav)
+  - Browser push notifications via Web Push / VAPID keys
+  - Transactional email via Resend (welcome email)
+
+LANDING PAGE
+  - Animated hero section with floating particles and mock QR code display
+  - Features section, How It Works, Stats, Sticker Preview, CTA, Footer
+  - All animations powered by Framer Motion
+
+
+================================================================================
+ 3. TECHNOLOGY STACK
+================================================================================
+
+FRONTEND
+  - Next.js 16.2.7         — App Router, TypeScript, SSR + CSR
+  - React 18.3             — UI library
+  - Tailwind CSS 3.4       — Utility-first styling
+  - Framer Motion 11       — Animations (spring physics, AnimatePresence)
+  - Radix UI               — Accessible headless components (Dialog, Tabs, etc.)
+  - React Hook Form 7      — Form state and validation
+  - Zod                    — Schema validation (shared client + server)
+  - Lucide React           — Icon set
+  - Fonts: Plus Jakarta Sans (body) + Outfit (display/headings)
+
+BACKEND
+  - Next.js API Routes     — All API endpoints under /api/
+  - NextAuth.js v5 (beta)  — Auth (JWT strategy, Credentials provider)
+  - Prisma 5.22            — ORM
+  - PostgreSQL 16          — Primary database (Docker)
+  - Redis 7                — Background jobs via BullMQ, rate limiting
+  - Sharp                  — Server-side image resize/compression (400x400 JPEG)
+  - qrcode npm package     — QR PNG and SVG generation
+  - web-push / VAPID       — Browser push notifications
+  - Resend                 — Transactional email
+  - Cloudinary             — Optional CDN for profile images
+
+INFRASTRUCTURE (local dev)
+  - Docker Desktop         — Runs PostgreSQL and Redis containers
+  - Node.js 18+            — Runtime
+
+DATABASE MODELS (Prisma schema)
+  - User                   — Core user record; has qrCodeId (unique CUID)
+  - EmergencyContact       — 1-to-many off User; isPrimary flag
+  - QrScan                 — Log of every scan (scannedUserId, scannerId, IP)
+  - Notification           — In-app notifications; NotificationType enum
+  - PushSubscription       — Web Push endpoint/keys per device
+  - Account / Session      — NextAuth.js OAuth adapter tables
+  - VerificationToken      — NextAuth.js email verification table
+
+
+================================================================================
+ 4. PROJECT FILE STRUCTURE
+================================================================================
+
+qr-sos/
+├── prisma/
+│   ├── schema.prisma          — Database schema (all models)
+│   └── seed.ts                — Seeds demo user (demo@qr-sos.com / demo1234)
+│
+├── public/
+│   ├── uploads/               — Local profile image storage (when no Cloudinary)
+│   ├── icon-192.png           — PWA icon (replace with real icons)
+│   └── icon-512.png           — PWA icon (replace with real icons)
+│
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx                     — Root layout, fonts, providers
+│   │   ├── page.tsx                       — Landing page
+│   │   ├── (auth)/
+│   │   │   ├── login/page.tsx             — Login page
+│   │   │   └── register/page.tsx          — Registration page
+│   │   ├── (dashboard)/
+│   │   │   ├── dashboard/page.tsx         — Dashboard (server, fetches data)
+│   │   │   ├── profile/page.tsx           — Profile settings page
+│   │   │   └── notifications/page.tsx     — Notifications list page
+│   │   ├── scan/[qrCodeId]/page.tsx       — Public scan landing page
+│   │   ├── offline/page.tsx               — PWA offline fallback
+│   │   └── api/
+│   │       ├── auth/
+│   │       │   ├── [...nextauth]/route.ts — NextAuth handler
+│   │       │   └── register/route.ts      — POST: create new account
+│   │       ├── users/
+│   │       │   ├── me/route.ts            — GET/PATCH: own profile
+│   │       │   └── scans/route.ts         — GET: own scan history
+│   │       ├── qr/
+│   │       │   ├── image/route.ts         — GET: serve QR as PNG image
+│   │       │   └── sticker/route.ts       — GET: serve QR sticker as SVG
+│   │       ├── scan/[qrCodeId]/route.ts   — POST: log a QR scan
+│   │       ├── notifications/route.ts     — GET/PATCH: notifications
+│   │       └── push/subscribe/route.ts    — POST: save push subscription
+│   │
+│   ├── components/
+│   │   ├── landing/                       — All landing page sections
+│   │   │   ├── hero-section.tsx
+│   │   │   ├── features-section.tsx
+│   │   │   ├── how-it-works.tsx
+│   │   │   ├── stats-section.tsx
+│   │   │   ├── sticker-preview.tsx
+│   │   │   ├── cta-section.tsx
+│   │   │   ├── landing-nav.tsx
+│   │   │   └── footer.tsx
+│   │   ├── auth/
+│   │   │   ├── login-form.tsx             — Login form component
+│   │   │   └── register-form.tsx          — 4-step registration wizard
+│   │   ├── dashboard/
+│   │   │   ├── dashboard-client.tsx       — Dashboard UI + ScannerModal
+│   │   │   ├── dashboard-nav.tsx          — Top nav with profile photo
+│   │   │   ├── profile-client.tsx         — Profile edit form
+│   │   │   └── notifications-client.tsx   — Notifications list
+│   │   ├── scan/
+│   │   │   └── scan-page-client.tsx       — Public scan page UI
+│   │   ├── providers.tsx                  — SessionProvider + QueryClientProvider
+│   │   └── ui/                            — Radix-based UI primitives
+│   │
+│   ├── lib/
+│   │   ├── auth.ts                        — NextAuth config, JWT callbacks
+│   │   ├── prisma.ts                      — Prisma client singleton
+│   │   ├── qr-generator.ts                — QR PNG + SVG sticker generation
+│   │   ├── cloudinary.ts                  — Cloudinary upload helper
+│   │   ├── notifications.ts               — Resend email + push notification
+│   │   ├── redis.ts                       — Upstash/local Redis + rate limit
+│   │   └── utils.ts                       — clsx/cn helper, getClientIp
+│   │
+│   ├── hooks/
+│   │   ├── use-push-notifications.ts      — Web Push subscription hook
+│   │   └── use-toast.ts                   — Toast notification hook
+│   │
+│   ├── proxy.ts                           — NextAuth middleware (route protection)
+│   └── types/next-auth.d.ts               — Session type augmentation
+
+
+================================================================================
+ 5. ENVIRONMENT VARIABLES (.env.local)
+================================================================================
+
+The file already exists at: qr-sos/.env.local
+
+Required (already set for local dev):
+  DATABASE_URL         = postgresql://qrsos:qrsos123@localhost:5432/qrsos
+  NEXTAUTH_URL         = http://localhost:3000
+  NEXTAUTH_SECRET      = (auto-generated secret — already set)
+  NEXT_PUBLIC_APP_URL  = http://localhost:3000
+  REDIS_URL            = redis://localhost:6379
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY  = (already set)
+  VAPID_PRIVATE_KEY             = (already set)
+  VAPID_SUBJECT                 = (already set)
+
+Optional (add real keys for full functionality):
+  CLOUDINARY_CLOUD_NAME      — Profile photo CDN (get free at cloudinary.com)
+  CLOUDINARY_API_KEY         — Same account
+  CLOUDINARY_API_SECRET      — Same account
+  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME — Same cloud name (public)
+
+  RESEND_API_KEY             — Transactional email (get free at resend.com)
+  EMAIL_FROM                 — Sender address, e.g. noreply@yourdomain.com
+
+  UPSTASH_REDIS_REST_URL     — Production Redis rate limiting (upstash.com)
+  UPSTASH_REDIS_REST_TOKEN   — Same Upstash account
+
+Without Cloudinary: profile images are saved to public/uploads/ on your disk.
+Without Resend: welcome emails are silently skipped (no error thrown).
+Without Upstash: local Redis is used for rate limiting (works fine for dev).
+
+
+================================================================================
+ 6. HOW TO RUN THE PROJECT (STEP BY STEP)
+================================================================================
+
+------------------------------------------------------------
+ PREREQUISITES (install once, if not already installed)
+------------------------------------------------------------
+
+  1. Install Node.js v18 or higher
+     Download from: https://nodejs.org
+     Verify: node --version
+
+  2. Install Docker Desktop
+     Download from: https://www.docker.com/products/docker-desktop
+     Verify: docker --version
+
+------------------------------------------------------------
+ ONE-TIME SETUP (first time only)
+------------------------------------------------------------
+
+  3. Open a terminal and go to the project folder:
+        cd "E:\NEW_CT\Share Code Claude\qr-sos"
+
+  4. Install npm dependencies:
+        npm install --legacy-peer-deps
+
+     (--legacy-peer-deps is needed because NextAuth v5 beta has peer
+      dependency conflicts with some Radix packages — this flag bypasses them)
+
+  5. Create the Docker containers (PostgreSQL + Redis):
+
+        docker run -d --name qrsos-postgres `
+          -e POSTGRES_USER=qrsos `
+          -e POSTGRES_PASSWORD=qrsos123 `
+          -e POSTGRES_DB=qrsos `
+          -p 5432:5432 `
+          postgres:16-alpine
+
+        docker run -d --name qrsos-redis `
+          -p 6379:6379 `
+          redis:7-alpine
+
+  6. Run database migrations (creates all tables):
+        $env:DATABASE_URL="postgresql://qrsos:qrsos123@localhost:5432/qrsos"
+        npx prisma migrate dev --name init
+
+  7. Seed the demo user (creates demo@qr-sos.com / demo1234):
+        npx prisma db seed
+
+------------------------------------------------------------
+ EVERY TIME YOU WANT TO START THE PROJECT
+------------------------------------------------------------
+
+  8. Start Docker Desktop
+     (Click the whale icon from Start menu or taskbar.
+      Wait until the whale animation stops — Docker is ready.)
+
+  9. Start the database containers:
+        docker start qrsos-postgres
+        docker start qrsos-redis
+
+     To verify they are running:
+        docker ps
+
+     You should see both qrsos-postgres and qrsos-redis listed as "Up".
+
+ 10. Start the Next.js development server:
+        cd "E:\NEW_CT\Share Code Claude\qr-sos"
+        npm run dev
+
+     Wait for the message:
+        ✓ Ready in Xs — started server on http://localhost:3000
+
+ 11. Open your browser and go to:
+        http://localhost:3000
+
+------------------------------------------------------------
+ DEMO LOGIN (test account already in the database)
+------------------------------------------------------------
+
+  Email    : demo@qr-sos.com
+  Password : demo1234
+
+  After logging in you will land on the Dashboard where you can:
+  - See your QR code
+  - Download the QR sticker (SVG)
+  - View emergency contacts
+  - View recent scans
+  - Edit your profile and photo
+  - View notifications
+
+------------------------------------------------------------
+ USEFUL COMMANDS
+------------------------------------------------------------
+
+  Start dev server          :  npm run dev
+  Build for production      :  npm run build
+  Start production server   :  npm start
+  Open Prisma Studio (DB UI):  npm run prisma:studio
+  Run DB migrations (prod)  :  npm run prisma:migrate
+  Re-seed demo user         :  npx prisma db seed
+
+  Stop Docker containers    :  docker stop qrsos-postgres qrsos-redis
+  Remove Docker containers  :  docker rm qrsos-postgres qrsos-redis
+  View Docker logs (DB)     :  docker logs qrsos-postgres
+
+------------------------------------------------------------
+ TROUBLESHOOTING
+------------------------------------------------------------
+
+  PROBLEM : "Cannot connect to database" / Prisma connection error
+  FIX     : Make sure Docker Desktop is running and both containers are started.
+            Run: docker ps
+            If qrsos-postgres is not listed, run: docker start qrsos-postgres
+
+  PROBLEM : "Port 5432 already in use"
+  FIX     : Another PostgreSQL might be running. Stop it, or change the port
+            in docker run (-p 5433:5432) and update DATABASE_URL accordingly.
+
+  PROBLEM : "Unexpected end of JSON input" on profile save (500 error)
+  FIX     : This was caused by storing base64 image data in the JWT cookie
+            (which has a 4 KB limit). This has been fixed — images are now
+            saved to public/uploads/ and only the short path is stored.
+
+  PROBLEM : QR code not showing on dashboard
+  FIX     : The dashboard now loads the QR code from /api/qr/image (generated
+            on-demand). If still blank, make sure you are logged in and the
+            dev server is running.
+
+  PROBLEM : Emergency contacts "Continue" button not working during registration
+  FIX     : This has been fixed — form validation now triggers each nested
+            field individually (emergencyContacts.0.name, etc.).
+
+  PROBLEM : Profile picture not showing in nav after upload
+  FIX     : After saving, the app calls updateSession() to refresh the JWT.
+            If still not showing, do a full page refresh (F5).
+
+  PROBLEM : npm install fails with peer dependency errors
+  FIX     : Always use: npm install --legacy-peer-deps
+
+
+================================================================================
+ 7. DEMO WALKTHROUGH
+================================================================================
+
+  1. Go to http://localhost:3000 — you will see the landing page with
+     animated particles and a mock QR sticker preview.
+
+  2. Click "Get Started" or go to /register to create a new account, or
+     use the demo account (demo@qr-sos.com / demo1234).
+
+  3. On the Dashboard:
+     - Your QR code is displayed in the center.
+     - Click "Download Sticker" to get a printable SVG file.
+       The SVG is a 400x520 card with gradient red border, SOS icon,
+       your QR code, and your first name.
+     - The "Recent Scans" section shows who scanned your QR.
+       Click any scan row to see that person's profile in a modal popup.
+
+  4. To simulate a QR scan:
+     - Open a second browser / incognito window.
+     - Go to http://localhost:3000/scan/<your-qrCodeId>
+       (The qrCodeId is the last 6 characters shown as "ID: XXXXXX" on
+        the sticker, or find the full ID in Prisma Studio.)
+     - The scan page will show your emergency contacts.
+     - Go back to the Dashboard and refresh — you will see a new scan entry.
+
+  5. Go to /profile to:
+     - Upload a profile photo (stored in public/uploads/ locally)
+     - Edit name, phone
+     - Update emergency contacts
+
+
+================================================================================
+ 8. NOTES FOR PRODUCTION DEPLOYMENT
+================================================================================
+
+  - Replace placeholder Cloudinary keys in .env.local with real credentials
+    from https://cloudinary.com (free tier is sufficient to start)
+  - Replace RESEND_API_KEY with a real key from https://resend.com
+    and set EMAIL_FROM to a verified sender domain
+  - Replace Upstash Redis stubs with real credentials from https://upstash.com
+    for production-grade rate limiting
+  - Set NEXTAUTH_URL to your real domain (e.g. https://qr-sos.com)
+  - Replace public/icon-192.png and public/icon-512.png with properly sized
+    PNG icons for PWA support
+  - Use a managed PostgreSQL service (Supabase, Neon, Railway, AWS RDS)
+    instead of Docker for production
+  - The project includes output: "standalone" in next.config — it can be
+    packaged as a Docker image for deployment
+
+
+================================================================================
+ END OF SUMMARY
+================================================================================
