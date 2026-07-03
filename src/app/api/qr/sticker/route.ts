@@ -18,9 +18,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'QR code not found' }, { status: 404 });
   }
 
-  // Derive origin from the request so the QR URL matches the host the user
-  // is currently on (works for localhost AND LAN IP without env changes).
-  const { origin } = new URL(req.url);
+  const url = new URL(req.url);
+  const proto = req.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
+  const host = req.headers.get('host') || url.host;
+  const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || `${proto}://${host}`;
 
   const svg = await generateQRStickerSVG({
     qrCodeId: user.qrCodeId,

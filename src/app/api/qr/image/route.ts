@@ -18,9 +18,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'QR code not found' }, { status: 404 });
   }
 
-  // Use the request origin so the QR URL always matches the host the browser
-  // is currently on (works for localhost AND LAN IP without env changes).
-  const origin = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+  const proto = req.headers.get('x-forwarded-proto') || req.nextUrl.protocol.replace(':', '');
+  const host = req.headers.get('host') || req.nextUrl.host;
+  const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || `${proto}://${host}`;
   const scanUrl = `${origin}/scan/${user.qrCodeId}`;
 
   const pngBuffer = await QRCode.toBuffer(scanUrl, {
