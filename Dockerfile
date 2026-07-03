@@ -1,22 +1,25 @@
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# Install dependencies — copy prisma schema first so postinstall generates
+# the correct engine binary for Alpine Linux (no separate download needed)
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
 RUN npm ci --legacy-peer-deps
 
-# Rebuild the source code only when needed
+# Build stage — prisma generate already ran in deps via postinstall
 FROM base AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
 RUN npm run build
 
-# Production image, copy all the files and run next
+# Production image
 FROM base AS runner
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -29,8 +32,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
