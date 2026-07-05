@@ -5,16 +5,26 @@ import { generateQRStickerSVG } from '@/lib/qr-generator';
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { qrCodeId: true, name: true, profileImage: true },
+    where: { id: userId },
+    select: { qrCodeId: true, name: true, profileImage: true, paymentStatus: true },
   });
 
-  if (!user?.qrCodeId) {
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const isPaid = user.paymentStatus === 'completed' || user.paymentStatus === 'paid' || user.paymentStatus === 'active';
+  if (!isPaid) {
+    return NextResponse.json({ error: 'Payment Required' }, { status: 402 });
+  }
+
+  if (!user.qrCodeId) {
     return NextResponse.json({ error: 'QR code not found' }, { status: 404 });
   }
 

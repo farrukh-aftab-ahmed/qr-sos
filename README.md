@@ -206,6 +206,68 @@ nginx/
 
 ---
 
+## 🔌 Local Development Webhook Setup (Paddle & Ngrok)
+
+To securely receive and test Paddle payment events on your local development machine (`localhost:3000`), we use an isolated Ngrok edge tunnel.
+
+### 1. Project-Isolated Tunnel Script (`tunnel.bat`)
+To keep authentication keys out of the global operating system profile, we use a local environment script. Create a file named `tunnel.bat` in the project root directory (this file is already ignored in `.gitignore` so it will never be pushed to GitHub):
+
+```bat
+@echo off
+:: Set the token strictly inside this temporary terminal session's memory
+set NGROK_AUTHTOKEN=your_actual_token_here
+
+:: Fire up the tunnel targeting the local Next.js port and permanent domain
+npx ngrok http 3000 --url=contort-bankbook-endorphin.ngrok-free.dev
+```
+
+### 2. Running the Tunnel
+Whenever you are developing or testing payment features, open a standard command prompt in the project root and run:
+```cmd
+tunnel
+```
+*Keep this window open while developing.* It safely maps your permanent development domain `https://contort-bankbook-endorphin.ngrok-free.dev` straight to your local Next.js server.
+
+### 3. Sandbox Webhook Integration Mapping
+Our Paddle Sandbox dashboard is configured to send automated notifications to your tunnel endpoint:
+* **Target URL:** `https://contort-bankbook-endorphin.ngrok-free.dev/api/webhooks/paddle`
+* **Subscribed Event Triggers:**
+  - `transaction.completed` (Fired upon successful payment invoice capture)
+  - `subscription.created` (Fired upon initial service provisioning)
+  - `subscription.updated` (Fired upon subscription changes or cancellations)
+
+### 4. Required Environment Variables
+Ensure both `.env` and `.env.local` files contain all 5 verified operational keys:
+```env
+NEXT_PUBLIC_PADDLE_ENVIRONMENT="sandbox"
+NEXT_PUBLIC_PADDLE_PRICE_ID="pri_your_price_id_here"
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN="test_your_client_token_here"
+PADDLE_API_KEY="pdl_sdbx_apikey_your_key_here"
+PADDLE_WEBHOOK_SECRET="ntfset_your_webhook_secret_here"
+```
+
+### 5. How to Retrieve Paddle Sandbox Credentials
+1. **Paddle Environment (`NEXT_PUBLIC_PADDLE_ENVIRONMENT`):** Set this to `"sandbox"` for local testing.
+2. **Client Token (`NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`):** 
+   - Sign in to the [Paddle Sandbox Dashboard](https://sandbox-login.paddle.com/).
+   - Navigate to **Developer Tools > Authentication**.
+   - Generate a new client-side token (prefixed with `ptk_`).
+3. **Price ID (`NEXT_PUBLIC_PADDLE_PRICE_ID`):**
+   - Navigate to **Catalog > Products & Prices** in your Paddle Sandbox dashboard.
+   - Create a one-time product (e.g. "QR-SOS Sticker Activation") and set its price to **$1.58 USD** (which covers the $1.00 sticker price plus the $0.58 processing fee surcharge).
+   - Copy the generated price ID (prefixed with `pri_`).
+4. **Secret API Key (`PADDLE_API_KEY`):**
+   - Go to **Developer Tools > Authentication** in the dashboard.
+   - Under **API Keys**, generate a new secret key (prefixed with `pdl_sdbx_`).
+5. **Webhook Secret Key (`PADDLE_WEBHOOK_SECRET`):**
+   - Go to **Developer Tools > Webhooks**.
+   - Create a webhook destination pointing to your ngrok tunnel: `https://contort-bankbook-endorphin.ngrok-free.dev/api/webhooks/paddle`
+   - Select the `transaction.completed` event.
+   - Save to generate the webhook secret (prefixed with `pdl_ntfset_`).
+
+---
+
 ## License
 
 MIT — Built for life-saving. Use it.

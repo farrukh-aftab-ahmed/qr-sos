@@ -37,6 +37,9 @@ yarn-error.log*
 # Nginx certs (never commit)
 nginx/certs/
 
+# Ngrok
+tunnel.bat
+
 # Misc
 *.log
 .vercel

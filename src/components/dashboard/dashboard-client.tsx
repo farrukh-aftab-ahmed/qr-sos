@@ -2,11 +2,12 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, Shield, Bell, Eye, Download, RefreshCw, Phone, Users,
-         Activity, Loader2 } from 'lucide-react';
+         Activity, Loader2, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { getInitials, timeAgo } from '@/lib/utils';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
+import { PaddleCheckoutButton } from '@/components/checkout/PaddleCheckoutButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ interface User {
   qrScans: Scan[];
   notifications: Notification[];
   _count: { qrScans: number };
+  paymentStatus: string | null;
 }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -71,6 +73,8 @@ const itemVariants = {
 export function DashboardClient({ user }: { user: User }) {
   const [downloading, setDownloading]     = useState(false);
   const [selectedScan, setSelectedScan]   = useState<Scan | null>(null);
+
+  const isPaid = user.paymentStatus === 'completed' || user.paymentStatus === 'paid' || user.paymentStatus === 'active';
 
   const scannerInfo: ScannerInfo | null = selectedScan
     ? {
@@ -171,29 +175,64 @@ export function DashboardClient({ user }: { user: User }) {
 
             {user.qrCodeId ? (
               <div className="flex flex-col items-center">
-                <div className="relative p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(255,45,85,0.15)] mb-4">
+                <div className="relative p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(255,45,85,0.15)] mb-4 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/api/qr/image" alt="Your QR Code" width={160} height={160} className="rounded-lg" />
-                  <motion.div
-                    className="absolute inset-0 border-2 border-[#FF2D55]/30 rounded-2xl"
-                    animate={{ opacity: [0.3, 0.8, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                  <img
+                    src="/api/qr/image"
+                    alt="Your QR Code"
+                    width={160}
+                    height={160}
+                    className={`rounded-lg transition-all duration-300 ${!isPaid ? 'blur-md select-none pointer-events-none' : ''}`}
                   />
+                  {!isPaid && (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-2xl">
+                      <Lock className="w-8 h-8 text-[#FF2D55] animate-pulse" />
+                    </div>
+                  )}
+                  {isPaid && (
+                    <motion.div
+                      className="absolute inset-0 border-2 border-[#FF2D55]/30 rounded-2xl"
+                      animate={{ opacity: [0.3, 0.8, 0.3] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  )}
                 </div>
                 <p className="text-white/40 text-xs text-center mb-4">
                   ID: <span className="font-mono text-white/60">{user.qrCodeId.slice(-8).toUpperCase()}</span>
                 </p>
-                <motion.button
-                  onClick={handleDownloadSticker}
-                  disabled={downloading}
-                  className="sos-button w-full py-2.5 text-sm flex items-center justify-center gap-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {downloading
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
-                    : <><Download className="w-4 h-4" /> Download Sticker</>}
-                </motion.button>
+                {!isPaid ? (
+                  <div className="w-full space-y-3">
+                    <div className="text-center px-2">
+                      <p className="text-white/60 text-xs font-semibold">One-time Activation Fee</p>
+                      <div className="mt-1 flex items-baseline justify-center gap-1">
+                        <span className="text-2xl font-black text-white">$1.00</span>
+                        <span className="text-white/40 text-[10px]">USD</span>
+                      </div>
+                      <div className="mt-1 text-white/40 text-[10px] leading-normal">
+                        <p>Sticker: $1.00 • Processing Fee: $0.58</p>
+                      </div>
+                    </div>
+                    <PaddleCheckoutButton
+                      userId={user.id}
+                      userEmail={user.email}
+                      className="w-full py-2.5 text-sm font-bold text-white shadow-md bg-gradient-to-r from-[#FF2D55] to-[#FF6B35] hover:from-[#e02447] hover:to-[#e65a25] transition-all duration-300 rounded-xl flex items-center justify-center gap-2"
+                    >
+                      <Lock className="w-4 h-4" /> Unlock Sticker
+                    </PaddleCheckoutButton>
+                  </div>
+                ) : (
+                  <motion.button
+                    onClick={handleDownloadSticker}
+                    disabled={downloading}
+                    className="sos-button w-full py-2.5 text-sm flex items-center justify-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {downloading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+                      : <><Download className="w-4 h-4" /> Download Sticker</>}
+                  </motion.button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center py-8 text-white/30">
