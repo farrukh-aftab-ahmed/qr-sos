@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateQRStickerSVG } from '@/lib/qr-generator';
+import fs from 'fs';
+import path from 'path';
+
+let cachedLogoDataUrl: string | undefined;
+
+function getLogoDataUrl(): string | undefined {
+  if (cachedLogoDataUrl) return cachedLogoDataUrl;
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+    const buf = fs.readFileSync(logoPath);
+    cachedLogoDataUrl = `data:image/png;base64,${buf.toString('base64')}`;
+    return cachedLogoDataUrl;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -28,6 +44,7 @@ export async function GET(req: Request) {
     userName: user.name,
     profileImageUrl: user.profileImage || undefined,
     appUrl: origin,
+    logoDataUrl: getLogoDataUrl(),
   });
 
   return new NextResponse(svg, {
