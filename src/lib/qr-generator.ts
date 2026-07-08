@@ -41,11 +41,13 @@ export async function generateQRStickerSVG(options: QRStickerOptions): Promise<s
     .replace(/<\/svg>/g, '')
     .trim();
 
-  // Card dimensions: 400 × 520
-  // Logo  : x=155, y=18, w=90, h=84   (516:484 ≈ 1.07 ratio → 90×84)
-  // URL   : x=20,  y=113, w=360, h=52  rx=26
-  // QR    : x=16,  y=175, w=368, h=272 rx=18  (inner pad 14px)
-  // Bar   : x=0,   y=447, w=400, h=73
+  // Layout (400×628, rx=18):
+  //   16px red margin on ALL sides of the combined white+black card
+  //   Logo       : y=18  h=84  → ends y=102
+  //   URL pill   : y=112 h=52  → ends y=164
+  //   Combined   : x=16  y=174 w=368 h=438 rx=14  → ends y=612  (16px red below)
+  //     White QR : y=174 h=368 → ends y=542  (14px margin → QR is 340×340, no side gaps)
+  //     Black bar: y=542 h=70  → ends y=612  (clipped to combined shape)
 
   const logoSection = logoDataUrl
     ? `<circle cx="200" cy="60" r="40" fill="white"/>
@@ -61,32 +63,24 @@ export async function generateQRStickerSVG(options: QRStickerOptions): Promise<s
              font-family="Arial Black,Arial,sans-serif" font-weight="900"
              font-size="16" fill="white" letter-spacing="3">SOS</text>`;
 
-  // Layout (400×520, rx=18):
-  //   16px red margin on ALL sides of the combined white+black card
-  //   Logo       : y=18  h=84  → ends y=102
-  //   URL pill   : y=112 h=52  → ends y=164
-  //   Combined   : x=16  y=174 w=368 h=330 rx=14  → ends y=504  (16px red below)
-  //     White QR : y=174 h=260 → ends y=434
-  //     Black bar: y=434 h=70  → ends y=504  (clipped to combined shape)
-
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="400" height="520" viewBox="0 0 400 520"
+<svg width="400" height="628" viewBox="0 0 400 628"
      xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
     <clipPath id="card">
-      <rect width="400" height="520" rx="18" ry="18"/>
+      <rect width="400" height="628" rx="18" ry="18"/>
     </clipPath>
     <!-- clips the black bar to the combined white+black rounded rect -->
     <clipPath id="qrCard">
-      <rect x="16" y="174" width="368" height="330" rx="14" ry="14"/>
+      <rect x="16" y="174" width="368" height="438" rx="14" ry="14"/>
     </clipPath>
   </defs>
 
   <g clip-path="url(#card)">
 
     <!-- ── Red background ── -->
-    <rect width="400" height="520" fill="#C8102E"/>
+    <rect width="400" height="628" fill="#C8102E"/>
 
     <!-- ── Logo ── -->
     ${logoSection}
@@ -101,15 +95,16 @@ export async function generateQRStickerSVG(options: QRStickerOptions): Promise<s
 
     <!-- ── Combined white+black card (16px red on all 4 sides) ── -->
     <!-- White QR area -->
-    <rect x="16" y="174" width="368" height="330" rx="14" fill="white"/>
-    <svg x="30" y="188" width="340" height="232" viewBox="${qrViewBox}">
+    <rect x="16" y="174" width="368" height="438" rx="14" fill="white"/>
+    <!-- QR is 340×340 (square) → no left/right whitespace -->
+    <svg x="30" y="188" width="340" height="340" viewBox="${qrViewBox}">
       ${qrInner}
     </svg>
 
     <!-- Black bar clipped to the same rounded rect so bottom corners are rounded -->
     <g clip-path="url(#qrCard)">
-      <rect x="16" y="434" width="368" height="70" fill="#111111"/>
-      <text x="200" y="476"
+      <rect x="16" y="542" width="368" height="70" fill="#111111"/>
+      <text x="200" y="584"
             text-anchor="middle"
             font-family="Arial Black, Arial, sans-serif"
             font-size="20" font-weight="900"
