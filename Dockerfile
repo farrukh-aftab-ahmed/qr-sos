@@ -13,6 +13,15 @@ RUN npm ci --legacy-peer-deps
 FROM base AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
+
+# NEXT_PUBLIC_* vars must be present at build time so Next.js can inline them
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_APP_NAME=QR-SOS
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
