@@ -4,29 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { Shield, Zap, QrCode, ArrowRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-
-// --------------------------------------------------------------------------
-// Deterministic mock QR pattern — same value on server and client (no Math.random)
-// --------------------------------------------------------------------------
-const FIXED_DARK_CELLS = new Set([
-  0,1,2,3,4,5,6,
-  7,14,21,28,35,
-  42,43,44,45,46,47,48,
-  8,15,22,29,36,
-  10,11,12,13,
-  17,24,31,38,
-  16,23,30,37,
-  19,26,33,40,
-  20,27,34,41,
-]);
-
-const MOCK_QR_49 = Array.from({ length: 49 }, (_, i) =>
-  FIXED_DARK_CELLS.has(i) || (i * 17 + 3) % 7 > 3
-);
-
-// Deterministic duration per cell so transition is varied but stable
-const QR_DURATIONS = Array.from({ length: 49 }, (_, i) => 2 + (i % 5) * 0.25);
+import { StickerMockup } from '@/components/ui/sticker-mockup';
 
 // --------------------------------------------------------------------------
 // Particle type
@@ -205,48 +183,16 @@ export function HeroSection() {
           className="relative inline-block"
         >
           <div className="relative">
-            {/* Glow behind card */}
-            <div className="absolute inset-0 bg-[#FF2D55]/20 blur-3xl rounded-3xl scale-110" />
+            {/* Glow behind sticker */}
+            <div className="absolute inset-0 bg-[#C8102E]/20 blur-3xl rounded-3xl scale-110" />
 
-            {/* Mock QR sticker card */}
-            <div className="relative glass-card p-8 max-w-xs mx-auto border border-[#FF2D55]/30">
-              <div className="text-center mb-4">
-                <Image
-                  src="/logo.png"
-                  alt="QR-SOS"
-                  width={100}
-                  height={100}
-                  className="h-12 w-auto object-contain mx-auto"
-                />
-              </div>
-
-              {/* Mock QR code — deterministic pattern, no Math.random in render */}
-              <div className="bg-white rounded-xl p-4 mb-4 shadow-[0_0_30px_rgba(255,45,85,0.2)]">
-                <div className="w-full aspect-square grid grid-cols-7 gap-0.5">
-                  {MOCK_QR_49.map((dark, i) => (
-                    <motion.div
-                      key={i}
-                      className={`rounded-sm ${dark ? 'bg-gray-900' : 'bg-transparent'}`}
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{
-                        duration: QR_DURATIONS[i],
-                        delay: i * 0.02,
-                        repeat: Infinity,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <p className="text-white/40 text-xs tracking-widest uppercase">Scan In Emergency</p>
-                <p className="text-white font-bold text-sm mt-1">Alex Johnson</p>
-              </div>
-
-              {/* Pulse effect */}
+            {/* Real sticker mockup */}
+            <div className="relative">
+              <StickerMockup className="w-[220px] mx-auto shadow-[0_30px_80px_rgba(0,0,0,0.5),0_0_60px_rgba(200,16,46,0.25)]" />
+              {/* Pulse ring */}
               <motion.div
-                className="absolute -inset-1 rounded-2xl border border-[#FF2D55]/50"
-                animate={{ opacity: [0, 0.5, 0], scale: [0.95, 1.05, 0.95] }}
+                className="absolute -inset-2 rounded-[22px] border border-[#C8102E]/40"
+                animate={{ opacity: [0, 0.6, 0], scale: [0.97, 1.03, 0.97] }}
                 transition={{ duration: 3, repeat: Infinity }}
               />
             </div>

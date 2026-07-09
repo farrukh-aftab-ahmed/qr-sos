@@ -4,13 +4,7 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { Shield, Download, Printer } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
-
-// Deterministic mock QR pattern for the sticker preview (no Math.random in render)
-const MOCK_QR_64 = Array.from({ length: 64 }, (_, i) => ({
-  opacity: (i * 7 + 5) % 11 > 3 ? 1 : 0,
-  animateOpacity: (i * 13 + 7) % 10 > 7 ? 0 : 1,
-}));
+import { StickerMockup } from '@/components/ui/sticker-mockup';
 
 export function StickerPreview() {
   const ref = useRef(null);
@@ -91,63 +85,8 @@ export function StickerPreview() {
               {/* Glow */}
               <div className="absolute inset-0 bg-[#FF2D55]/20 blur-3xl rounded-3xl scale-110" />
 
-              {/* Sticker SVG mockup */}
-              <div
-                className="relative rounded-3xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(255,45,85,0.15)]"
-                style={{ width: 280, background: 'linear-gradient(135deg, #0A0A0F, #1a0a2e)' }}
-              >
-                <div className="p-8">
-                  {/* Top bar */}
-                  <div className="h-1.5 rounded-full bg-gradient-to-r from-[#FF2D55] to-[#FF6B35] mb-6" />
-
-                  {/* SOS logo */}
-                  <div className="text-center mb-5">
-                    <Image
-                      src="/logo.png"
-                      alt="QR-SOS"
-                      width={100}
-                      height={100}
-                      className="h-12 w-auto object-contain mx-auto"
-                    />
-                  </div>
-
-                  {/* QR placeholder */}
-                  <div className="bg-white rounded-xl p-3 mb-5 shadow-[0_0_20px_rgba(255,45,85,0.15)]">
-                    <div className="aspect-square w-full grid grid-cols-8 gap-0.5 p-1">
-                      {MOCK_QR_64.map((cell, i) => (
-                        <motion.div
-                          key={i}
-                          className="rounded-[1px] bg-gray-900"
-                          style={{ opacity: cell.opacity }}
-                          animate={{ opacity: [null, cell.animateOpacity] }}
-                          transition={{
-                            duration: 3,
-                            delay: i * 0.05,
-                            repeat: Infinity,
-                            repeatType: 'reverse',
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Scan badge */}
-                  <div className="flex items-center justify-center gap-1 bg-[#FF2D55]/10 border border-[#FF2D55]/20 rounded-full py-1.5 px-3 mb-4">
-                    <span className="text-[10px] text-[#FF6B35] font-medium tracking-wider">📱 SCAN IN EMERGENCY</span>
-                  </div>
-
-                  <div className="text-center">
-                    <p className="text-white font-bold text-base">ALEX JOHNSON</p>
-                    <p className="text-white/30 text-[9px] tracking-widest mt-1">ID: A7F2B1 · qr-sos.com</p>
-                  </div>
-
-                  {/* Corner decorations */}
-                  <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-[#FF2D55]/40 rounded-tl" />
-                  <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-[#FF2D55]/40 rounded-tr" />
-                  <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-[#FF2D55]/40 rounded-bl" />
-                  <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-[#FF2D55]/40 rounded-br" />
-                </div>
-              </div>
+              {/* Sticker mockup — matches the real downloadable sticker */}
+              <StickerMockup className="w-[240px] shadow-[0_30px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(200,16,46,0.3)]" />
             </motion.div>
 
             {/* Badges */}
