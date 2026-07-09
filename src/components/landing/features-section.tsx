@@ -11,7 +11,7 @@ const features = [
   { icon: Bell, title: 'Instant Scan Alerts', desc: 'Real-time push & email notifications when your QR is scanned.', accent: '#FF2D55' },
   { icon: Lock, title: 'Privacy Protected', desc: 'Scanners must register before seeing any contact details.', accent: '#FF6B35' },
   { icon: Smartphone, title: 'Works on Any Phone', desc: 'Native camera scanner — no app download needed.', accent: '#FFD60A' },
-  { icon: Download, title: 'Print-Ready Sticker', desc: 'High-quality SVG sticker, ready to print and laminate.', accent: '#30D158' },
+  { icon: Download, title: 'Print-Ready Sticker', desc: 'High-quality sticker, ready to print and laminate.', accent: '#30D158' },
   { icon: Users, title: 'Multiple Emergency Contacts', desc: 'Add up to 3 emergency contacts with relationship info.', accent: '#64D2FF' },
   { icon: Eye, title: 'Scan History', desc: 'See who scanned your code, when, and from where.', accent: '#BF5AF2' },
   { icon: Shield, title: 'Verified Profiles', desc: 'Email and phone verification builds scanner trust.', accent: '#FF2D55' },

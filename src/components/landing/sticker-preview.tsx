@@ -42,7 +42,7 @@ export function StickerPreview() {
 
             <div className="space-y-4 mb-10">
               {[
-                { icon: Download, text: 'Download as print-ready SVG', sub: 'High resolution, infinitely scalable' },
+                { icon: Download, text: 'Download as print-ready sticker', sub: 'High resolution, infinitely scalable' },
                 { icon: Printer, text: 'Print at any size', sub: 'From 5cm stickers to full page' },
                 { icon: Shield, text: 'Instantly regenerate if needed', sub: 'New code, same profile' },
               ].map((item, i) => (
@@ -159,7 +159,7 @@ export function StickerPreview() {
             >
               <div className="flex items-center gap-2">
                 <Download className="w-3.5 h-3.5 text-[#30D158]" />
-                <span className="text-white text-xs font-medium">SVG Download</span>
+                <span className="text-white text-xs font-medium">Sticker Download</span>
               </div>
             </motion.div>
 
