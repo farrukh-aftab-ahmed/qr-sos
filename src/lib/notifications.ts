@@ -40,6 +40,9 @@ export async function sendPushNotification(
   payload: { title: string; body: string; icon?: string; data?: Record<string, unknown> }
 ) {
   const subscriptions = await prisma.pushSubscription.findMany({ where: { userId } });
+  console.log(`[push] sending to ${subscriptions.length} subscription(s) for user ${userId}`);
+
+  if (subscriptions.length === 0) return;
 
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
@@ -49,6 +52,14 @@ export async function sendPushNotification(
       )
     )
   );
+
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      console.log(`[push] ✓ sent to ${subscriptions[i].endpoint.slice(0, 60)}...`);
+    } else {
+      console.error(`[push] ✗ failed for ${subscriptions[i].endpoint.slice(0, 60)}...`, r.reason);
+    }
+  });
 
   // Remove expired/invalid subscriptions
   const failedEndpoints = results
