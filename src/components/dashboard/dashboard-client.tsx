@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { getInitials, timeAgo } from '@/lib/utils';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
+import { PWAInstallBanner } from '@/components/dashboard/pwa-install-banner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,9 @@ export function DashboardClient({ user }: { user: User }) {
         animate="show"
         className="space-y-6"
       >
+        {/* PWA install prompt — shows on Android (native) and iOS (manual steps) */}
+        <PWAInstallBanner />
+
         {/* Header */}
         <motion.div variants={itemVariants} className="flex items-start justify-between gap-4 flex-wrap">
           <div>

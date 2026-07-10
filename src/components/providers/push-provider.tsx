@@ -5,16 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, X, Bell } from 'lucide-react';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
 
-// ── Push context (lets dashboard button trigger subscribe) ────────────────────
+// ── Push context ──────────────────────────────────────────────────────────────
 interface PushCtx {
   permission: NotificationPermission | 'unsupported';
   subscribed: boolean;
   subscribe: () => Promise<void>;
+  // PWA install
+  isInstalled: boolean;
+  iosNeedsInstall: boolean;
+  canInstallNatively: boolean;
+  installApp: () => Promise<void>;
 }
 const PushContext = createContext<PushCtx>({
   permission: 'default',
   subscribed: false,
   subscribe: async () => {},
+  isInstalled: false,
+  iosNeedsInstall: false,
+  canInstallNatively: false,
+  installApp: async () => {},
 });
 export const usePush = () => useContext(PushContext);
 
@@ -127,6 +136,9 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const [subscribed, setSubscribed] = useState(false);
   const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [canInstallNatively, setCanInstallNatively] = useState(false);
+  const deferredInstallPrompt = useRef<Event & { prompt: () => Promise<void> } | null>(null);
   const lastSeenIdRef = useRef<string | null>(null);
   const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -216,6 +228,41 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ── PWA install detection ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Already installed if running in standalone mode
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true;
+    setIsInstalled(standalone);
+
+    // Capture Android/desktop native install prompt
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      deferredInstallPrompt.current = e as Event & { prompt: () => Promise<void> };
+      setCanInstallNatively(true);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+
+    // Clear prompt once installed
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      setCanInstallNatively(false);
+      deferredInstallPrompt.current = null;
+    });
+
+    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+  }, []);
+
+  const installApp = useCallback(async () => {
+    if (!deferredInstallPrompt.current) return;
+    await deferredInstallPrompt.current.prompt();
+    deferredInstallPrompt.current = null;
+    setCanInstallNatively(false);
+  }, []);
+
   // ── subscribe — must be called from a user-gesture handler ───────────────
   const subscribe = useCallback(async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -289,47 +336,10 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const showBanner = !bannerDismissed && permission === 'default' && !subscribed;
-  const showIOSBanner = !bannerDismissed && iosNeedsInstall;
 
   return (
-    <PushContext.Provider value={{ permission, subscribed, subscribe }}>
+    <PushContext.Provider value={{ permission, subscribed, subscribe, isInstalled, iosNeedsInstall, canInstallNatively, installApp }}>
       {children}
-
-      {/* ── iOS: prompt to install as PWA before notifications are possible ── */}
-      <AnimatePresence>
-        {showIOSBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-[9980]"
-          >
-            <div className="relative overflow-hidden rounded-2xl border border-[#FF9500]/25 bg-[#0e0e16] shadow-[0_8px_40px_rgba(0,0,0,0.85)]">
-              <div className="h-0.5 bg-gradient-to-r from-[#FF9500] to-[#FF6B35]" />
-              <div className="p-4 flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#FF9500]/12 border border-[#FF9500]/20 flex items-center justify-center flex-shrink-0 text-base">
-                  􀎧
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-sm">Enable alerts on iPhone</p>
-                  <p className="text-white/55 text-xs mt-0.5 leading-relaxed">
-                    Tap <span className="text-white/80">Share</span> →{' '}
-                    <span className="text-white/80">"Add to Home Screen"</span>, then open QR-SOS from your home screen to enable notifications.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setBannerDismissed(true)}
-                  className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center flex-shrink-0 transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <X className="w-3.5 h-3.5 text-white/35" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Enable-notifications banner (shown until user taps or dismisses) ── */}
       <AnimatePresence>
