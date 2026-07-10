@@ -126,6 +126,7 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
   const [modalInfo, setModalInfo] = useState<ScannerInfo | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const [subscribed, setSubscribed] = useState(false);
+  const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
   const lastSeenIdRef = useRef<string | null>(null);
   const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -172,6 +173,19 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
   // ── Register service worker + sync current permission state ──────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Detect iOS not installed as PWA — push requires Home Screen app on iOS <17
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    if (isIOS && !isStandalone && !('PushManager' in window)) {
+      setIosNeedsInstall(true);
+      setPermission('unsupported');
+      return;
+    }
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPermission('unsupported');
       return;
@@ -274,14 +288,48 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const showBanner =
-    !bannerDismissed &&
-    permission === 'default' &&
-    !subscribed;
+  const showBanner = !bannerDismissed && permission === 'default' && !subscribed;
+  const showIOSBanner = !bannerDismissed && iosNeedsInstall;
 
   return (
     <PushContext.Provider value={{ permission, subscribed, subscribe }}>
       {children}
+
+      {/* ── iOS: prompt to install as PWA before notifications are possible ── */}
+      <AnimatePresence>
+        {showIOSBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-[9980]"
+          >
+            <div className="relative overflow-hidden rounded-2xl border border-[#FF9500]/25 bg-[#0e0e16] shadow-[0_8px_40px_rgba(0,0,0,0.85)]">
+              <div className="h-0.5 bg-gradient-to-r from-[#FF9500] to-[#FF6B35]" />
+              <div className="p-4 flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#FF9500]/12 border border-[#FF9500]/20 flex items-center justify-center flex-shrink-0 text-base">
+                  􀎧
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm">Enable alerts on iPhone</p>
+                  <p className="text-white/55 text-xs mt-0.5 leading-relaxed">
+                    Tap <span className="text-white/80">Share</span> →{' '}
+                    <span className="text-white/80">"Add to Home Screen"</span>, then open QR-SOS from your home screen to enable notifications.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBannerDismissed(true)}
+                  className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center flex-shrink-0 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3.5 h-3.5 text-white/35" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Enable-notifications banner (shown until user taps or dismisses) ── */}
       <AnimatePresence>
