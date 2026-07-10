@@ -1,9 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, X } from 'lucide-react';
+import { QrCode, X, Bell } from 'lucide-react';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
+
+// ── Push context (lets dashboard button trigger subscribe) ────────────────────
+interface PushCtx {
+  permission: NotificationPermission | 'unsupported';
+  subscribed: boolean;
+  subscribe: () => Promise<void>;
+}
+const PushContext = createContext<PushCtx>({
+  permission: 'default',
+  subscribed: false,
+  subscribe: async () => {},
+});
+export const usePush = () => useContext(PushContext);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -111,6 +124,8 @@ function ScanToast({
 export function PushProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modalInfo, setModalInfo] = useState<ScannerInfo | null>(null);
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [subscribed, setSubscribed] = useState(false);
   const lastSeenIdRef = useRef<string | null>(null);
   const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
@@ -154,39 +169,66 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ── Service worker registration + push subscription ───────────────────────
+  // ── Register service worker + sync current permission state ──────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPermission('unsupported');
+      return;
+    }
 
-    const setup = async () => {
-      try {
-        await navigator.serviceWorker.register('/sw.js');
+    // Register SW silently (no permission prompt here — must come from user tap)
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
 
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
+    // Sync current permission state
+    setPermission(Notification.permission);
 
-        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidKey) return;
-
-        const reg = await navigator.serviceWorker.ready;
+    // If already granted, reuse or restore existing subscription silently
+    if (Notification.permission === 'granted') {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      navigator.serviceWorker.ready.then(async (reg) => {
         const existing = await reg.pushManager.getSubscription();
-        const sub = existing ?? await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource,
-        });
+        if (existing) {
+          setSubscribed(true);
+          // Re-save in case it was lost from DB
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existing),
+          });
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub),
-        });
-      } catch (err) {
-        console.warn('[PushProvider] Push setup failed:', err);
-      }
-    };
+  // ── subscribe — must be called from a user-gesture handler ───────────────
+  const subscribe = useCallback(async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) return;
 
-    setup();
+    try {
+      const perm = await Notification.requestPermission();
+      setPermission(perm);
+      if (perm !== 'granted') return;
+
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      const sub = existing ?? await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource,
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub),
+      });
+      setSubscribed(true);
+    } catch (err) {
+      console.warn('[PushProvider] Push subscribe failed:', err);
+    }
   }, []);
 
   // ── Polling: detect new notifications while dashboard is open ─────────────
@@ -231,9 +273,54 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showBanner =
+    !bannerDismissed &&
+    permission === 'default' &&
+    !subscribed;
+
   return (
-    <>
+    <PushContext.Provider value={{ permission, subscribed, subscribe }}>
       {children}
+
+      {/* ── Enable-notifications banner (shown until user taps or dismisses) ── */}
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-[9980]"
+          >
+            <div className="relative overflow-hidden rounded-2xl border border-[#FF2D55]/25 bg-[#0e0e16] shadow-[0_8px_40px_rgba(0,0,0,0.85)]">
+              <div className="h-0.5 bg-gradient-to-r from-[#FF2D55] to-[#FF6B35]" />
+              <div className="p-4 flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#FF2D55]/12 border border-[#FF2D55]/20 flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-4 h-4 text-[#FF2D55]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-semibold text-sm">Enable scan alerts</p>
+                  <p className="text-white/55 text-xs mt-0.5">Get notified instantly when your QR is scanned</p>
+                  <button
+                    onClick={subscribe}
+                    className="mt-2 bg-[#FF2D55] hover:bg-[#e02040] text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    Allow notifications
+                  </button>
+                </div>
+                <button
+                  onClick={() => setBannerDismissed(true)}
+                  className="w-6 h-6 rounded-full hover:bg-white/10 flex items-center justify-center flex-shrink-0 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3.5 h-3.5 text-white/35" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Scanner profile modal — sits above toasts */}
       {modalInfo && (
@@ -258,6 +345,6 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
           ))}
         </AnimatePresence>
       </div>
-    </>
+    </PushContext.Provider>
   );
 }
