@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans, Outfit } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
@@ -62,6 +63,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${syne.variable}`} suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="min-h-screen bg-sos-darker antialiased">
+        {/* Capture beforeinstallprompt before React mounts — event fires very early */}
+        <Script id="pwa-install-capture" strategy="beforeInteractive">{`
+          window.__pwaInstallPrompt = null;
+          window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window.__pwaInstallPrompt = e;
+            window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+          });
+          window.addEventListener('appinstalled', function() {
+            window.__pwaInstalled = true;
+            window.dispatchEvent(new CustomEvent('pwa-installed'));
+          });
+        `}</Script>
         <Providers>
           {children}
           <Toaster />
