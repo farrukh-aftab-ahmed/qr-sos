@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
 
 export const metadata: Metadata = { title: 'Dashboard' };
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const session = await auth();

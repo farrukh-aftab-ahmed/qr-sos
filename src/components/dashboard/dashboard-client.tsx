@@ -5,6 +5,7 @@ import { QrCode, Shield, Bell, Eye, Download, RefreshCw, Phone, Users,
          Activity, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getInitials, timeAgo } from '@/lib/utils';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
 import { PWAInstallBanner } from '@/components/dashboard/pwa-install-banner';
@@ -71,16 +72,25 @@ const itemVariants = {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export function DashboardClient({ user }: { user: User }) {
+  const router = useRouter();
   const [downloading, setDownloading]     = useState(false);
   const [selectedScan, setSelectedScan]   = useState<Scan | null>(null);
   const [scanCount, setScanCount]         = useState(user._count.qrScans);
 
-  // Increment total-scans counter whenever PushProvider detects a new QR_SCANNED notification
+  // Keep local count in sync when server re-renders with fresh data (e.g. after router.refresh())
   useEffect(() => {
-    const handler = () => setScanCount((c) => c + 1);
+    setScanCount(user._count.qrScans);
+  }, [user._count.qrScans]);
+
+  // On new scan: optimistically increment the counter and refresh server data
+  useEffect(() => {
+    const handler = () => {
+      setScanCount((c) => c + 1);
+      router.refresh(); // re-fetches server component so recent scans list also updates
+    };
     window.addEventListener('qr-scan-new', handler);
     return () => window.removeEventListener('qr-scan-new', handler);
-  }, []);
+  }, [router]);
 
   const scannerInfo: ScannerInfo | null = selectedScan
     ? {

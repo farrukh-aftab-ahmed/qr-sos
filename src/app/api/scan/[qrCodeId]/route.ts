@@ -40,6 +40,23 @@ export async function GET(
   const isLoggedIn = !!session?.user?.id;
   const isSelfScan = isLoggedIn && session!.user!.id === scannedUser.id;
 
+  // Detect guest→login redirect: same IP already scanned this QR as a guest within the last 10 min.
+  // When a visitor scans, gets the guest profile, then taps "Sign In" and logs in, the callbackUrl
+  // sends them back here — which would fire a second notification. Merge those into one scan instead.
+  let priorGuestScanId: string | null = null;
+  if (isLoggedIn && !isSelfScan) {
+    const prior = await prisma.qrScan.findFirst({
+      where: {
+        scannedUserId: scannedUser.id,
+        scannerIp:    ip,
+        scannerId:    null,  // was anonymous
+        createdAt:    { gte: new Date(Date.now() - 10 * 60 * 1000) },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    priorGuestScanId = prior?.id ?? null;
+  }
+
   // Resolve IP location for guest scans (non-blocking — used for both scan record and notification)
   let scannerCity: string | undefined;
   let scannerCountry: string | undefined;
@@ -51,31 +68,41 @@ export async function GET(
 
   const locationStr = scannerCity && scannerCountry ? `${scannerCity}, ${scannerCountry}` : undefined;
 
-  // Log the scan (always — guest scans recorded with null scannerId)
-  const scan = await prisma.qrScan.create({
-    data: {
-      scannedUserId: scannedUser.id,
-      scannerId: isLoggedIn && !isSelfScan ? session!.user!.id : null,
-      scannerIp: ip,
-      location: locationStr,
-      userAgent: req.headers.get('user-agent') || undefined,
-    },
-  });
+  // Log the scan — if this is a returning visitor (guest→login), upgrade the existing scan record
+  // instead of creating a duplicate, and skip the notification (owner was already notified)
+  let scan: { id: string };
+  if (priorGuestScanId) {
+    scan = await prisma.qrScan.update({
+      where: { id: priorGuestScanId },
+      data:  { scannerId: session!.user!.id },
+      select: { id: true },
+    });
+  } else {
+    scan = await prisma.qrScan.create({
+      data: {
+        scannedUserId: scannedUser.id,
+        scannerId:  isLoggedIn && !isSelfScan ? session!.user!.id : null,
+        scannerIp:  ip,
+        location:   locationStr,
+        userAgent:  req.headers.get('user-agent') || undefined,
+      },
+    });
+  }
 
-  // Notify owner (non-blocking, skip self-scans)
-  if (!isSelfScan) {
+  // Notify owner — skip self-scans and guest→login revisits (already notified as guest)
+  if (!isSelfScan && !priorGuestScanId) {
     if (isLoggedIn) {
       const scanner = await prisma.user.findUnique({
         where: { id: session!.user!.id },
         select: { name: true, email: true, phone: true, profileImage: true, qrCodeId: true },
       });
       sendQRScannedNotification(scannedUser.id, {
-        scannerName:    scanner?.name,
-        scannerEmail:   scanner?.email,
-        scannerPhone:   scanner?.phone,
-        scannerImage:   scanner?.profileImage,
+        scannerName:     scanner?.name,
+        scannerEmail:    scanner?.email,
+        scannerPhone:    scanner?.phone,
+        scannerImage:    scanner?.profileImage,
         scannerQrCodeId: scanner?.qrCodeId,
-        scannerId:      session!.user!.id,
+        scannerId:       session!.user!.id,
       }).catch(console.error);
     } else {
       // Guest scan — pass pre-resolved location to avoid a second geolocation fetch
