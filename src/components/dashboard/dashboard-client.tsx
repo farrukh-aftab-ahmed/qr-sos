@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, Shield, Bell, Eye, Download, RefreshCw, Phone, Users,
          Activity, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getInitials, timeAgo } from '@/lib/utils';
 import { ScannerModal, type ScannerInfo } from '@/components/shared/scanner-modal';
 import { PWAInstallBanner } from '@/components/dashboard/pwa-install-banner';
@@ -23,6 +23,7 @@ interface Scan {
   id: string;
   createdAt: Date;
   scannerIp: string | null;
+  location: string | null;
   scanner: Scanner | null;
 }
 
@@ -72,17 +73,26 @@ const itemVariants = {
 export function DashboardClient({ user }: { user: User }) {
   const [downloading, setDownloading]     = useState(false);
   const [selectedScan, setSelectedScan]   = useState<Scan | null>(null);
+  const [scanCount, setScanCount]         = useState(user._count.qrScans);
+
+  // Increment total-scans counter whenever PushProvider detects a new QR_SCANNED notification
+  useEffect(() => {
+    const handler = () => setScanCount((c) => c + 1);
+    window.addEventListener('qr-scan-new', handler);
+    return () => window.removeEventListener('qr-scan-new', handler);
+  }, []);
 
   const scannerInfo: ScannerInfo | null = selectedScan
     ? {
-        name:         selectedScan.scanner?.name,
-        email:        selectedScan.scanner?.email,
-        phone:        selectedScan.scanner?.phone,
-        profileImage: selectedScan.scanner?.profileImage,
-        qrCodeId:     selectedScan.scanner?.qrCodeId,
-        scannerIp:    selectedScan.scannerIp,
-        scannedAt:    selectedScan.createdAt,
-        isGuest:      !selectedScan.scanner,
+        name:            selectedScan.scanner?.name,
+        email:           selectedScan.scanner?.email,
+        phone:           selectedScan.scanner?.phone,
+        profileImage:    selectedScan.scanner?.profileImage,
+        qrCodeId:        selectedScan.scanner?.qrCodeId,
+        scannerIp:       selectedScan.scannerIp,
+        scannerLocation: selectedScan.location,
+        scannedAt:       selectedScan.createdAt,
+        isGuest:         !selectedScan.scanner,
       }
     : null;
 
@@ -142,7 +152,7 @@ export function DashboardClient({ user }: { user: User }) {
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Scans',        value: user._count.qrScans,          icon: Eye,    color: '#FF2D55' },
+            { label: 'Total Scans',        value: scanCount,                    icon: Eye,    color: '#FF2D55' },
             { label: 'Emergency Contacts', value: user.emergencyContacts.length, icon: Users,  color: '#FF6B35' },
             { label: 'Recent Alerts',      value: user.notifications.length,     icon: Bell,   color: '#FFD60A' },
             { label: 'Profile Status',     value: 'Active',                      icon: Shield, color: '#30D158' },

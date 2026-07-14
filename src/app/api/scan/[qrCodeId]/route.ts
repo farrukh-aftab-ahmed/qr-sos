@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { scanRateLimit } from '@/lib/redis';
 import { sendQRScannedNotification } from '@/lib/notifications';
 import { getClientIp } from '@/lib/utils';
+import { getIpLocation } from '@/lib/geo';
 
 export async function GET(
   req: NextRequest,
@@ -39,12 +40,24 @@ export async function GET(
   const isLoggedIn = !!session?.user?.id;
   const isSelfScan = isLoggedIn && session!.user!.id === scannedUser.id;
 
+  // Resolve IP location for guest scans (non-blocking — used for both scan record and notification)
+  let scannerCity: string | undefined;
+  let scannerCountry: string | undefined;
+  if (!isSelfScan && !isLoggedIn) {
+    const loc = await getIpLocation(ip);
+    scannerCity = loc.city;
+    scannerCountry = loc.country;
+  }
+
+  const locationStr = scannerCity && scannerCountry ? `${scannerCity}, ${scannerCountry}` : undefined;
+
   // Log the scan (always — guest scans recorded with null scannerId)
   const scan = await prisma.qrScan.create({
     data: {
       scannedUserId: scannedUser.id,
       scannerId: isLoggedIn && !isSelfScan ? session!.user!.id : null,
       scannerIp: ip,
+      location: locationStr,
       userAgent: req.headers.get('user-agent') || undefined,
     },
   });
@@ -65,8 +78,8 @@ export async function GET(
         scannerId:      session!.user!.id,
       }).catch(console.error);
     } else {
-      // Guest scan — send IP so owner can see who viewed anonymously
-      sendQRScannedNotification(scannedUser.id, { scannerIp: ip }).catch(console.error);
+      // Guest scan — pass pre-resolved location to avoid a second geolocation fetch
+      sendQRScannedNotification(scannedUser.id, { scannerIp: ip, scannerCity, scannerCountry }).catch(console.error);
     }
   }
 

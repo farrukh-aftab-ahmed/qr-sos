@@ -5,21 +5,21 @@
 # ============================================================
 
 # ─── CONFIGURATION — fill these in before running ────────────────────────────
-$PROJECT_ID      = "qr-sos-prod"          # your GCP project ID (must be globally unique)
+$PROJECT_ID      = "qr-sos900"
 $REGION          = "us-central1"
 $REPO            = "qrsos"
 $SERVICE         = "qr-sos"
 $DB_INSTANCE     = "qrsos-db"
 $DB_NAME         = "qrsos"
 $DB_USER         = "qrsos"
-$DB_PASSWORD     = "ChangeMe123!"         # change to a strong password
+$DB_PASSWORD     = "Resolve@900"
 $GCS_BUCKET      = "qr-sos-images-prod"  # must be globally unique
 
 # Credentials you get from third-party free-tier accounts:
-$RESEND_API_KEY         = "re_your_key_here"
-$UPSTASH_REST_URL       = "https://your-db.upstash.io"
-$UPSTASH_REST_TOKEN     = "your-upstash-token"
-$REDIS_URL              = "rediss://default:password@your-db.upstash.io:6379"
+$RESEND_API_KEY         = "re_gFbqyhdR_3evKeobA3Y25onWb6pcL37uQ"
+$UPSTASH_REST_URL       = "https://dynamic-boxer-40186.upstash.io"
+$UPSTASH_REST_TOKEN     = "AZz6AAIgcDFhYjYyODFhYjlmODE0ZjU4YTlhYWNlNDRlZjY2OWI3NA"
+$REDIS_URL              = "rediss://default:AZz6AAIgcDFhYjYyODFhYjlmODE0ZjU4YTlhYWNlNDRlZjY2OWI3NA@dynamic-boxer-40186.upstash.io:6379"
 $NEXTAUTH_SECRET        = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
 
 # ─── STEP 1 — Login & project ────────────────────────────────────────────────

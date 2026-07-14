@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, Phone, Mail, Clock, UserCircle2, Wifi, ExternalLink } from 'lucide-react';
+import { X, Phone, Mail, Clock, UserCircle2, Wifi, ExternalLink, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { getInitials, timeAgo } from '@/lib/utils';
 
@@ -13,6 +13,7 @@ export interface ScannerInfo {
   profileImage?: string | null;
   qrCodeId?: string | null;
   scannerIp?: string | null;
+  scannerLocation?: string | null;
   scannedAt: Date | string;
   isGuest: boolean;
 }
@@ -23,7 +24,7 @@ interface Props {
 }
 
 function ModalContent({ info, onClose }: Props) {
-  const { name, email, phone, profileImage, qrCodeId, scannerIp, scannedAt, isGuest } = info;
+  const { name, email, phone, profileImage, qrCodeId, scannerIp, scannerLocation, scannedAt, isGuest } = info;
 
   return (
     <motion.div
@@ -151,6 +152,18 @@ function ModalContent({ info, onClose }: Props) {
               </div>
 
               <div className="space-y-2 mb-4">
+                {scannerLocation && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#64D2FF]/8 border border-[#64D2FF]/15">
+                    <div className="w-7 h-7 rounded-lg bg-[#64D2FF]/10 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-3.5 h-3.5 text-[#64D2FF]" />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-[10px]">Location</p>
+                      <p className="text-white text-xs font-medium">{scannerLocation}</p>
+                    </div>
+                  </div>
+                )}
+
                 {scannerIp && (
                   <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FF6B35]/8 border border-[#FF6B35]/15">
                     <div className="w-7 h-7 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">

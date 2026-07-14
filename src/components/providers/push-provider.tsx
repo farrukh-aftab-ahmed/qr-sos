@@ -47,6 +47,8 @@ interface NotificationData {
   scannerImage?: string | null;
   scannerQrCodeId?: string | null;
   scannerIp?: string | null;
+  scannerCity?: string | null;
+  scannerCountry?: string | null;
   scannerId?: string;
   isGuest?: boolean;
 }
@@ -174,10 +176,14 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
         isGuest:      false,
       });
     } else {
+      const location = d.scannerCity && d.scannerCountry
+        ? `${d.scannerCity}, ${d.scannerCountry}`
+        : null;
       setModalInfo({
-        scannerIp: d.scannerIp ?? null,
-        scannedAt: toast.createdAt ?? new Date().toISOString(),
-        isGuest:   true,
+        scannerIp:       d.scannerIp ?? null,
+        scannerLocation: location,
+        scannedAt:       toast.createdAt ?? new Date().toISOString(),
+        isGuest:         true,
       });
     }
   }, []);
@@ -316,6 +322,10 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
             createdAt: latest.createdAt,
             data:      latest.data ?? {},
           });
+          // Signal dashboard to increment its scan count live
+          if (latest.type === 'QR_SCANNED') {
+            window.dispatchEvent(new CustomEvent('qr-scan-new'));
+          }
         }
       } catch {
         // Network error — ignore

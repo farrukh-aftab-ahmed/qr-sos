@@ -2,6 +2,7 @@ import webpush from 'web-push';
 import { Resend } from 'resend';
 import { prisma } from './prisma';
 import { NotificationType, Prisma } from '@prisma/client';
+import { getIpLocation } from './geo';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY ?? 'placeholder');
 
@@ -82,6 +83,8 @@ export async function sendQRScannedNotification(
     scannerImage?: string | null;
     scannerQrCodeId?: string | null;
     scannerIp?: string;
+    scannerCity?: string;
+    scannerCountry?: string;
     scannerId?: string;
   } = {}
 ) {
@@ -90,12 +93,22 @@ export async function sendQRScannedNotification(
 
   const { scannerName, scannerEmail, scannerPhone, scannerImage, scannerQrCodeId, scannerIp, scannerId } = opts;
 
+  // Resolve city/country — use pre-resolved values if already available, otherwise look up
+  let scannerCity = opts.scannerCity;
+  let scannerCountry = opts.scannerCountry;
+  if (!scannerName && scannerIp && !scannerCity) {
+    const loc = await getIpLocation(scannerIp);
+    scannerCity = loc.city;
+    scannerCountry = loc.country;
+  }
+
   const title = 'Your QR Code Was Scanned';
   let message: string;
   if (scannerName) {
     message = `${scannerName} scanned your QR-SOS code`;
   } else if (scannerIp) {
-    message = `Anonymous guest viewed your profile (IP: ${scannerIp})`;
+    const locationStr = scannerCity && scannerCountry ? ` from ${scannerCity}, ${scannerCountry}` : '';
+    message = `Anonymous guest${locationStr} viewed your profile (IP: ${scannerIp})`;
   } else {
     message = 'Someone scanned your QR-SOS code';
   }
@@ -108,6 +121,8 @@ export async function sendQRScannedNotification(
       scannerImage,
       scannerQrCodeId,
       scannerIp,
+      scannerCity,
+      scannerCountry,
       scannerId,
       isGuest: !scannerId,
     }),
@@ -122,7 +137,7 @@ export async function sendQRScannedNotification(
         from: process.env.EMAIL_FROM!,
         to: user.email,
         subject: `🚨 ${title}`,
-        html: buildQRScannedEmail(user.name, scannerName, scannerIp),
+        html: buildQRScannedEmail(user.name, scannerName, scannerIp, scannerCity, scannerCountry),
       }),
   ]);
 }
@@ -140,11 +155,12 @@ export async function sendWelcomeEmail(email: string, name: string) {
   });
 }
 
-function buildQRScannedEmail(userName: string, scannerName?: string, scannerIp?: string): string {
+function buildQRScannedEmail(userName: string, scannerName?: string, scannerIp?: string, city?: string, country?: string): string {
+  const locationStr = city && country ? ` from ${city}, ${country}` : '';
   const scannerLine = scannerName
     ? `<strong>${scannerName}</strong> has scanned`
     : scannerIp
-    ? `An anonymous guest (IP: <code style="color:#FF6B35;">${scannerIp}</code>) has scanned`
+    ? `An anonymous guest${locationStr} (IP: <code style="color:#FF6B35;">${scannerIp}</code>) has scanned`
     : 'Someone scanned';
 
   return `

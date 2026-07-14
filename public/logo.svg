@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Navy blue circle background -->
+  <circle cx="100" cy="100" r="100" fill="#1C3C70"/>
+
+  <!-- Car silhouette (orange) — front view -->
+  <!-- Roof arch -->
+  <path d="M 48 90 Q 50 48 100 44 Q 150 48 152 90"
+        stroke="#D45C12" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Left A-pillar -->
+  <path d="M 48 90 L 43 118"
+        stroke="#D45C12" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <!-- Left front bumper corner -->
+  <path d="M 43 118 Q 42 130 56 133 L 74 135"
+        stroke="#D45C12" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <!-- Right A-pillar -->
+  <path d="M 152 90 L 157 118"
+        stroke="#D45C12" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <!-- Right front bumper corner -->
+  <path d="M 157 118 Q 158 130 144 133 L 126 135"
+        stroke="#D45C12" stroke-width="9" fill="none" stroke-linecap="round"/>
+
+  <!-- QR text -->
+  <text x="100" y="110"
+        text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="52"
+        fill="white">QR</text>
+
+  <!-- SOS text -->
+  <text x="100" y="158"
+        text-anchor="middle"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="30"
+        fill="white"
+        letter-spacing="3">SOS</text>
+</svg>

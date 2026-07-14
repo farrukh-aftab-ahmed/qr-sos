@@ -28,18 +28,19 @@ self.addEventListener('push', (event) => {
     data = { title: 'QR-SOS', body: event.data.text() };
   }
 
-  // Always show the OS notification — on mobile a "background tab" is not
-  // visible to the user, so suppressing it here means they miss the alert.
-  // The in-app polling toast handles the duplicate when the page is active.
   event.waitUntil(
-    self.registration.showNotification(data.title || 'QR-SOS', {
-      body: data.body,
-      icon: data.icon || '/icon-192.png',
-      badge: '/icon-192.png',
-      data: data.data,
-      vibrate: [200, 100, 200],
-      requireInteraction: true,
-      tag: 'qr-scan',
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If any window is focused the in-app toast will handle it — skip OS notification
+      if (clientList.some((c) => c.focused)) return;
+      return self.registration.showNotification(data.title || 'QR-SOS', {
+        body: data.body,
+        icon: data.icon || '/icon-192.png',
+        badge: '/icon-192.png',
+        data: data.data,
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        tag: 'qr-scan',
+      });
     })
   );
 });

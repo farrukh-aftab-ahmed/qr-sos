@@ -19,6 +19,7 @@ export default async function DashboardPage() {
           id: true,
           createdAt: true,
           scannerIp: true,
+          location: true,
           scanner: { select: { name: true, profileImage: true, email: true, phone: true, qrCodeId: true } },
         },
       },
