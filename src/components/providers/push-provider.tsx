@@ -209,6 +209,12 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Skip service worker registration during development to prevent chunk loading issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PushProvider] Skipping service worker registration in development');
+      return;
+    }
+
     // Register SW silently (no permission prompt here — must come from user tap)
     navigator.serviceWorker.register('/sw.js').catch(() => {});
 
@@ -300,6 +306,10 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
 
   // ── Polling: detect new notifications while dashboard is open ─────────────
   useEffect(() => {
+    // Temporarily disabled to debug refresh loop
+    console.log('[PushProvider] Notification polling disabled for debugging');
+    return;
+
     const poll = async () => {
       try {
         const res = await fetch('/api/notifications?limit=1');
@@ -313,6 +323,7 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // Only dispatch event if we have a genuinely new notification
         if (latest.id !== lastSeenIdRef.current) {
           lastSeenIdRef.current = latest.id;
           addToast({
@@ -327,8 +338,9 @@ export function PushProvider({ children }: { children: React.ReactNode }) {
             window.dispatchEvent(new CustomEvent('qr-scan-new'));
           }
         }
-      } catch {
+      } catch (err) {
         // Network error — ignore
+        console.warn('[PushProvider] Polling error:', err);
       }
     };
 

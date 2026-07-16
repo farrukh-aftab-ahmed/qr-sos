@@ -6,7 +6,8 @@ import { NextResponse } from 'next/server';
 // auth.ts uses the full config (with Prisma) only in Node.js API routes.
 const { auth } = NextAuth(authConfig);
 
-const protectedPaths = ['/dashboard', '/profile', '/notifications'];
+const protectedPaths = ['/dashboard', '/profile', '/notifications', '/admin'];
+const adminPaths = ['/admin'];
 const authPaths = ['/login', '/register'];
 
 const MAX_COOKIE_BYTES = 4096;
@@ -39,11 +40,18 @@ export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
   const path = nextUrl.pathname;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isAdmin = !!(req.auth?.user as any)?.isAdmin;
 
   if (protectedPaths.some((p) => path.startsWith(p)) && !isLoggedIn) {
     const loginUrl = new URL('/login', nextUrl);
     loginUrl.searchParams.set('callbackUrl', path);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Logged-in but not admin: redirect away from /admin
+  if (adminPaths.some((p) => path.startsWith(p)) && isLoggedIn && !isAdmin) {
+    return NextResponse.redirect(new URL('/dashboard', nextUrl));
   }
 
   if (authPaths.includes(path) && isLoggedIn) {

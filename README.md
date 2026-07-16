@@ -50,6 +50,10 @@ git clone https://github.com/farrukh-aftab-ahmed/qr-sos.git
 cd qr-sos
 npm install
 ```
+OR
+```bash
+npm install --legacy-peer-deps
+```
 
 ### 2. Configure environment
 ```bash
@@ -77,6 +81,22 @@ npx prisma db seed
 This creates the schema and seeds a demo user:
 - **Email:** `demo@qr-sos.com`
 - **Password:** `demo1234`
+
+## Update:
+# For fresh installations (after migrations)
+npx prisma migrate dev --name init
+npx prisma db seed
+ 
+# For existing installations (to add/update demo accounts)
+npx prisma db seed
+
+Demo Admin:
+- **Email:** `admin@qr-sos.com`
+- **Password:** `admin1234`
+
+Demo User:
+- **Email:** `user@qr-sos.com`
+- **Password:** `user1234`
 
 ### 5. Start the dev server
 ```bash

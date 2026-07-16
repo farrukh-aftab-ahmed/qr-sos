@@ -18,6 +18,7 @@ model User {
   profileImagePublicId String?
   qrCode            String?   @unique
   qrCodeId          String?   @unique @default(cuid())
+  isAdmin           Boolean   @default(false)
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

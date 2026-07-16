@@ -4,15 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { LayoutDashboard, User, Bell, LogOut, QrCode } from 'lucide-react';
+import { LayoutDashboard, User, Bell, LogOut, QrCode, Shield } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { getInitials } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/profile',   icon: User,            label: 'Profile'   },
-  { href: '/notifications', icon: Bell,        label: 'Alerts'    },
+  { href: '/profile', icon: User, label: 'Profile' },
+  { href: '/notifications', icon: Bell, label: 'Alerts' },
+  { href: '/admin/dashboard', icon: Shield, label: 'Admin', adminOnly: true },
 ];
 
 export function DashboardNav() {
@@ -22,7 +23,7 @@ export function DashboardNav() {
   const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const user = session?.user as { name?: string; email?: string; profileImage?: string } | undefined;
+  const user = session?.user as { name?: string; email?: string; profileImage?: string; isAdmin?: boolean } | undefined;
 
   // Poll for unread notification count every 15s
   const fetchUnread = useCallback(async () => {
@@ -82,17 +83,19 @@ export function DashboardNav() {
         {/* Center nav items */}
         <div className="flex items-center gap-1">
           {navItems.map((item) => {
+            // Skip admin-only items if user is not admin
+            if ('adminOnly' in item && item.adminOnly && !user?.isAdmin) return null;
+
             const active = pathname === item.href;
             const isBell = item.icon === Bell;
             const showBadge = isBell && unreadCount > 0;
             return (
               <Link key={item.href} href={item.href}>
                 <motion.div
-                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    active
+                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active
                       ? 'bg-[#FF2D55]/15 text-[#FF6B35]'
                       : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                  }`}
+                    }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

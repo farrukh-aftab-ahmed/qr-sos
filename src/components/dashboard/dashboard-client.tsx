@@ -76,6 +76,7 @@ export function DashboardClient({ user }: { user: User }) {
   const [downloading, setDownloading]     = useState(false);
   const [selectedScan, setSelectedScan]   = useState<Scan | null>(null);
   const [scanCount, setScanCount]         = useState(user._count.qrScans);
+  const [qrImageError, setQrImageError]   = useState(false);
 
   // Keep local count in sync when server re-renders with fresh data (e.g. after router.refresh())
   useEffect(() => {
@@ -85,6 +86,7 @@ export function DashboardClient({ user }: { user: User }) {
   // On new scan: optimistically increment the counter and refresh server data
   useEffect(() => {
     const handler = () => {
+      console.log('[Dashboard] qr-scan-new event received, refreshing...');
       setScanCount((c) => c + 1);
       router.refresh(); // re-fetches server component so recent scans list also updates
     };
@@ -196,8 +198,21 @@ export function DashboardClient({ user }: { user: User }) {
             {user.qrCodeId ? (
               <div className="flex flex-col items-center">
                 <div className="relative p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(255,45,85,0.15)] mb-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/api/qr/image" alt="Your QR Code" width={160} height={160} className="rounded-lg" />
+                  {qrImageError ? (
+                    <div className="w-[160px] h-[160px] rounded-lg bg-gray-200 flex items-center justify-center">
+                      <QrCode className="w-8 h-8 text-gray-400" />
+                    </div>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img 
+                      src="/api/qr/image" 
+                      alt="Your QR Code" 
+                      width={160} 
+                      height={160} 
+                      className="rounded-lg"
+                      onError={() => setQrImageError(true)}
+                    />
+                  )}
                   <motion.div
                     className="absolute inset-0 border-2 border-[#FF2D55]/30 rounded-2xl"
                     animate={{ opacity: [0.3, 0.8, 0.3] }}

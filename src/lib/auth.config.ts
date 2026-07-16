@@ -24,6 +24,7 @@ export const authConfig = {
         token.qrCodeId = u.qrCodeId as string | undefined;
         token.profileImage = u.profileImage as string | undefined;
         token.phone = u.phone as string | undefined;
+        token.isAdmin = u.isAdmin as boolean | undefined;
       }
       return token;
     },
@@ -35,6 +36,7 @@ export const authConfig = {
         su.qrCodeId = token.qrCodeId;
         su.profileImage = token.profileImage;
         su.phone = token.phone;
+        su.isAdmin = token.isAdmin;
       }
       return session;
     },

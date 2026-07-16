@@ -76,6 +76,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             window.dispatchEvent(new CustomEvent('pwa-installed'));
           });
         `}</Script>
+        {/* Handle ChunkLoadError to prevent infinite reload loop */}
+        <Script id="chunk-error-handler" strategy="afterInteractive">{`
+          window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('ChunkLoadError')) {
+              console.warn('[ChunkLoadError] Caught chunk loading error, preventing reload');
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          });
+          window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && e.reason.message.includes('ChunkLoadError')) {
+              console.warn('[ChunkLoadError] Caught unhandled chunk rejection, preventing reload');
+              e.preventDefault();
+            }
+          });
+
+          // Unregister service workers during development to prevent chunk loading issues
+          if ('serviceWorker' in navigator && navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              registrations.forEach(function(registration) {
+                console.log('[ServiceWorker] Unregistering:', registration.scope);
+                registration.unregister();
+              });
+            });
+          }
+        `}</Script>
         <Providers>
           {children}
           <Toaster />

@@ -39,6 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           qrCodeId: user.qrCodeId ?? undefined,
           profileImage: user.profileImage ?? undefined,
           phone: user.phone,
+          isAdmin: user.isAdmin,
         };
       },
     }),

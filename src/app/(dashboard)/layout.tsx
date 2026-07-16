@@ -5,7 +5,12 @@ import { PushProvider } from '@/components/providers/push-provider';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session) redirect('/login?callbackUrl=/dashboard');
+  console.log('[DashboardLayout] Session:', session?.user?.email);
+
+  if (!session) {
+    console.log('[DashboardLayout] No session, redirecting to login');
+    redirect('/login?callbackUrl=/dashboard');
+  }
 
   return (
     <PushProvider>
